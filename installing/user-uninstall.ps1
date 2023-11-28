@@ -39,6 +39,7 @@ function Uninstall-All {
     $python_install = $KnotsInstallConfig.python_install
     $rez_install_path = $KnotsInstallConfig.rez_full_install_path
     $rez_scripts_path = $KnotsInstallConfig.rez_scripts
+    $env_var_scope = $KnotsInstallConfig.env_var_scope
 
     if (Test-Path -Path $rez_install_path) {
         LogInfo "removing $rez_install_path ..."
@@ -52,17 +53,17 @@ function Uninstall-All {
     # unset PATH environment variable if needed
     # there is a probability to fucked up the user PATH variable so we recommend
     # to backup the PATH variable that is echoed.
-    $current_path = [System.Environment]::GetEnvironmentVariable('PATH', 'Machine')
+    $current_path = [System.Environment]::GetEnvironmentVariable('PATH', $env_var_scope)
     $new_path = ($current_path.Split(';') | Where-Object { $_ -ne $rez_scripts_path }) -join ';'
     if ((-not($current_path -eq $new_path)) -and ($new_path)) {
         LogDebug "current PATH environment variable: $current_path"
         LogDebug "setting new PATH environment variable: $new_path"
-        [System.Environment]::SetEnvironmentVariable('PATH', $new_path, 'Machine')
+        [System.Environment]::SetEnvironmentVariable('PATH', $new_path, $env_var_scope)
         LogInfo "in case of issue, previous PATH variable can be retrieved in $LOG_PATH"
     }
 
     LogInfo "removing REZ_CONFIG_FILE environment variable"
-    [Environment]::SetEnvironmentVariable('REZ_CONFIG_FILE', "", 'Machine')
+    [Environment]::SetEnvironmentVariable('REZ_CONFIG_FILE', "", $env_var_scope)
 
     Write-Host $( "_"*80 ) -ForegroundColor "green"
     LogSucess "finished uninstalling rez"

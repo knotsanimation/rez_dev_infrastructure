@@ -205,7 +205,7 @@ function Install-All {
         LogSucess "installed rez $( $config.rez_version ) to $( $config.rez_full_install_path )"
     }
 
-    Install-System -rez_config_file $config.rez_config_file -rez_scripts $config.rez_scripts -env_scope "Machine"
+    Install-System -rez_config_file $config.rez_config_file -rez_scripts $config.rez_scripts -env_scope $config.env_var_scope
 
     if (Test-Path -Path "$HOME\.rezconfig") {
         LogWarning "found local rezconfig at $HOME\.rezconfig; please remove to avoid issues."
