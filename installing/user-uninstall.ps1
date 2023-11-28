@@ -33,8 +33,14 @@ function Uninstall-All {
         throw "Please restart the script in a shell with Administrator permissions."
     }
 
+    # ensure that we are not uninstalling stuff that have never been installed ...
+    $installed_version = [System.Environment]::GetEnvironmentVariable('KNOTS_REZ_INSTALLER_VERSION', $KnotsInstallConfig.env_var_scope)
+    if (-not ($installed_version -eq $INSTALLER_VERSION)){
+        throw "Uninstaller version mismatch: expected $installed_version got $INSTALLER_VERSION"
+    }
+
     Write-Output $( "="*80 )
-    Write-Output "[$SCRIPTNAME] uninstall Rez package manager.`n"
+    Write-Output "[$SCRIPTNAME v$INSTALLER_VERSION] uninstall Rez package manager.`n"
 
     $python_install = $KnotsInstallConfig.python_install
     $rez_install_path = $KnotsInstallConfig.rez_full_install_path
@@ -64,6 +70,9 @@ function Uninstall-All {
 
     LogInfo "removing REZ_CONFIG_FILE environment variable"
     [Environment]::SetEnvironmentVariable('REZ_CONFIG_FILE', "", $env_var_scope)
+
+    LogInfo "removing KNOTS_REZ_INSTALLER_VERSION environment variable"
+    [Environment]::SetEnvironmentVariable('KNOTS_REZ_INSTALLER_VERSION', "", $env_var_scope)
 
     Write-Host $( "_"*80 ) -ForegroundColor "green"
     LogSucess "finished uninstalling rez"

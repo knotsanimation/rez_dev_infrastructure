@@ -162,6 +162,9 @@ function Install-System {
     LogInfo "setting environment variable REZ_CONFIG_FILE with $rez_config_file"
     [Environment]::SetEnvironmentVariable('REZ_CONFIG_FILE', $rez_config_file, $env_scope)
 
+    LogInfo "setting environment variable KNOTS_REZ_INSTALLER_VERSION with $INSTALLER_VERSION"
+    [Environment]::SetEnvironmentVariable('KNOTS_REZ_INSTALLER_VERSION', $INSTALLER_VERSION, $env_scope)
+
 }
 
 function Install-All {
@@ -176,7 +179,7 @@ function Install-All {
     $config = $KnotsInstallConfig
 
     Write-Output $( "="*80 )
-    Write-Output "[$SCRIPTNAME] install Rez package manager.`n"
+    Write-Output "[$SCRIPTNAME v$INSTALLER_VERSION] install Rez package manager.`n"
     LogInfo "starting rez installation to $( $config.knots_install_path )"
 
     # TODO uncomment

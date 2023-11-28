@@ -1,3 +1,5 @@
+$INSTALLER_VERSION = "0.1.0"
+
 $KnotsInstallConfig = @{
     rez_version = ''
     python_version = ''
