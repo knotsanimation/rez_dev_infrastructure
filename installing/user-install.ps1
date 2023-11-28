@@ -133,12 +133,26 @@ function Install-System {
     param([string]$rez_config_file, [string]$rez_scripts, [string]$env_scope)
 
     # query from global system as we already modified PATH for this session
-    $new_path_var = [Environment]::GetEnvironmentVariable("Path", $env_scope)
-    $new_path_var = $new_path_var + ";$rez_scripts"
+    $current_var = [Environment]::GetEnvironmentVariable("PATH", $env_scope)
 
-    LogInfo "setting environment variable PATH with $new_path_var"
-    [Environment]::SetEnvironmentVariable('PATH', $new_path_var, $env_scope)
+    if (-not($current_var.Split(';').contains($rez_scripts))) {
+        LogDebug "got environment variable PATH=$current_var"
 
+        $path_delimiter = ";"
+        if ( $current_var.EndsWith(";")) {
+            $path_delimiter = ""
+        }
+        $new_path_var = $current_var + "$path_delimiter$rez_scripts"
+
+        LogInfo "setting environment variable PATH with $new_path_var"
+        [Environment]::SetEnvironmentVariable('PATH', $new_path_var, $env_scope)
+    }
+    else {
+        LogDebug "environment variable PATH is already set as expected"
+    }
+
+    $current_var = [Environment]::GetEnvironmentVariable("REZ_CONFIG_FILE", $env_scope)
+    LogDebug "got environment variable REZ_CONFIG_FILE=$current_var"
     LogInfo "setting environment variable REZ_CONFIG_FILE with $rez_config_file"
     [Environment]::SetEnvironmentVariable('REZ_CONFIG_FILE', $rez_config_file, $env_scope)
 
@@ -177,11 +191,10 @@ function Install-All {
         throw "Issue with python installation, unexpected path $check_python_path"
     }
 
-    Install-Rez -rez_version $rez_version -target_dir $rez_full_install_path -env_scope "Machine"
+    Install-Rez -rez_version $rez_version -target_dir $rez_full_install_path
     LogSucess "installed rez $rez_version to $rez_full_install_path"
 
-    # TODO uncomment
-    # Install-System -rez_config_file $rez_config_file -rez_scripts $rez_scripts
+    Install-System -rez_config_file $rez_config_file -rez_scripts $rez_scripts -env_scope "Machine"
 
     LogSucess "installation finished; you can test it by opening a new shell and typing:"
     LogSucess "  rez -V"
