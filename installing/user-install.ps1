@@ -1,6 +1,9 @@
 # global config
 $ErrorActionPreference = "Stop"
 
+# import configuration
+. "$PSScriptRoot\config.ps1"
+
 # // Utility code
 
 function Log {
@@ -47,8 +50,8 @@ function Install-Python {
     #>
     param([string]$python_version, [string]$target_dir)
 
-    if (Test-Path -Path $python_install) {
-        LogWarning "python already installed at $python_install"
+    if (Test-Path -Path $target_dir) {
+        LogWarning "python already installed at $target_dir"
         return
     }
 
@@ -160,41 +163,33 @@ function Install-System {
 
 function Install-All {
 
-    # configuration
-    $rez_version = "2.113.0"
-    $python_version = "3.10.11"
-    $knots_install_path = "C:\Program Files\knots"
-    $python_install = "$knots_install_path\python-rez"
-    $rez_full_install_path = "$knots_install_path\rez"
-    $rez_scripts = "$rez_full_install_path\Scripts\rez"
-    # TODO update when definitive
-    $rez_config_file = "N:\skynet\apps\rez\config\.rezconfig"
+    $config = $KnotsInstallConfig
 
-    LogInfo "starting rez installation to $knots_install_path"
+    LogInfo "starting rez installation to $($config.knots_install_path)"
 
     # TODO uncomment
     #if (-not (Test-Path -Path $rez_config_file)) {
     #    throw "Rez config file does not exists, check your properly mapped the NAS drives."
     #}
-    if (-not(Test-Path -Path $knots_install_path)) {
-        LogInfo "creating $knots_install_path"
-        New-Item -Type Directory -Path $knots_install_path | Out-Null
+    if (-not(Test-Path -Path $config.knots_install_path)) {
+        LogInfo "creating $($config.knots_install_path)"
+        New-Item -Type Directory -Path $config.knots_install_path | Out-Null
     }
 
-    Install-Python -python_version $python_version -target_dir $python_install
-    LogSucess "installed python $python_version to $python_install"
+    Install-Python -python_version $config.python_version -target_dir $config.python_install
+    LogSucess "installed python $($config.python_version) to $($config.python_install)"
 
-    $env:PATH += ";$python_install"
+    $env:PATH += ";$($config.python_install)"
 
     $check_python_path = (Get-Command python).Path
-    if (-not($check_python_path -eq "$python_install\python.exe")) {
+    if (-not($check_python_path -eq "$($config.python_install)\python.exe")) {
         throw "Issue with python installation, unexpected path $check_python_path"
     }
 
-    Install-Rez -rez_version $rez_version -target_dir $rez_full_install_path
-    LogSucess "installed rez $rez_version to $rez_full_install_path"
+    Install-Rez -rez_version $config.rez_version -target_dir $config.rez_full_install_path
+    LogSucess "installed rez $($config.rez_version) to $($config.rez_full_install_path)"
 
-    Install-System -rez_config_file $rez_config_file -rez_scripts $rez_scripts -env_scope "Machine"
+    Install-System -rez_config_file $config.rez_config_file -rez_scripts $config.rez_scripts -env_scope "Machine"
 
     LogSucess "installation finished; you can test it by opening a new shell and typing:"
     LogSucess "  rez -V"
