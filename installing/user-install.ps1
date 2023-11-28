@@ -87,21 +87,21 @@ function Install-Rez {
 }
 
 function Install-System {
-    param([string]$rez_config_file, [string]$rez_scripts)
+    param([string]$rez_config_file, [string]$rez_scripts, [string]$env_scope)
 
     # query from global system as we already modified PATH for this session
-    $new_path_var = [Environment]::GetEnvironmentVariable("Path", [EnvironmentVariableTarget]::Machine)
+    $new_path_var = [Environment]::GetEnvironmentVariable("Path", $env_scope)
     $new_path_var = $new_path_var + ";$rez_scripts"
 
     LogInfo "setting environment variable PATH with $new_path_var"
-    [Environment]::SetEnvironmentVariable('PATH', $new_path_var, 'Machine')
+    [Environment]::SetEnvironmentVariable('PATH', $new_path_var, $env_scope)
 
     LogInfo "setting environment variable REZ_CONFIG_FILE with $rez_config_file"
-    [Environment]::SetEnvironmentVariable('REZ_CONFIG_FILE', $rez_config_file, 'Machine')
+    [Environment]::SetEnvironmentVariable('REZ_CONFIG_FILE', $rez_config_file, $env_scope)
 
 }
 
-function Start-Full-Installation {
+function Install-All {
 
     # configuration
     $rez_version = "2.113.0"
@@ -112,6 +112,8 @@ function Start-Full-Installation {
     $rez_scripts = "$rez_full_install_path\Scripts\rez"
     # TODO update when definitive
     $rez_config_file = "N:\skynet\apps\rez\config\.rezconfig"
+
+    LogInfo "starting rez installation to $knots_install_path"
 
     # TODO uncomment
     #if (-not (Test-Path -Path $rez_config_file)) {
@@ -132,14 +134,14 @@ function Start-Full-Installation {
         throw "Issue with python installation, unexpected path $check_python_path"
     }
 
-    Install-Rez -rez_version $rez_version -target_dir $rez_full_install_path
+    Install-Rez -rez_version $rez_version -target_dir $rez_full_install_path -env_scope "Machine"
     LogSucess "installed rez $rez_version to $rez_full_install_path"
 
     # TODO uncomment
     # Install-System -rez_config_file $rez_config_file -rez_scripts $rez_scripts
 
-    LogSucess "installation finished; you can test it by typing:"
+    LogSucess "installation finished; you can test it by opening a new shell and typing:"
     LogSucess "  rez -V"
 }
 
-Start-Full-Installation
+Install-All
