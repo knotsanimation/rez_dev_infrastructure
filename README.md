@@ -1,6 +1,6 @@
-# rez_dev_scripts
+# rez_dev_infrastructure
 
-scripts related to development and management of the rez infrastructure at Knots.
+resources related to development and management of the rez infrastructure at Knots.
 
 # content
 
