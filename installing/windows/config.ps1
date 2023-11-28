@@ -1,4 +1,4 @@
-$INSTALLER_VERSION = "0.1.0"
+$INSTALLER_VERSION = "0.1.1"
 
 $KnotsInstallConfig = @{
     rez_version = ''
@@ -26,4 +26,4 @@ $KnotsInstallConfig.rez_full_install_path = "$($KnotsInstallConfig.knots_install
 $KnotsInstallConfig.rez_scripts = "$($KnotsInstallConfig.rez_full_install_path)\Scripts\rez"
 $KnotsInstallConfig.rez_config_file = "$_knots_skynet_path\apps\rez\config\.rezconfig"
 $KnotsInstallConfig.uninstall_log_path = "$($KnotsInstallConfig.knots_install_path)\user-uninstall.log"
-$KnotsInstallConfig.env_var_scope = "Machine"
+$KnotsInstallConfig.env_var_scope = "User"
