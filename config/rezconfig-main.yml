@@ -1,0 +1,32 @@
+# // paths
+local_packages_path: "~\\rez\\packages"
+
+packages_path:
+  - "~\\rez\\packages"
+  - "${KNOTS_SKYNET_PATH}\\packages"
+
+release_packages_path: "${KNOTS_SKYNET_PATH}\\packages"
+
+package_definition_python_path: "${KNOTS_SKYNET_PATH}\\apps\\rez\\extensions\\include"
+plugin_path:
+  - "${KNOTS_SKYNET_PATH}\\apps\\rez\\extensions\\rezplugins"
+
+# // environment
+default_shell: "powershell"
+
+platform_map:
+  "os":
+    "windows-6.1(.*)": "windows-7"
+    "windows-6.2(.*)": "windows-8"
+    "windows-6.3(.*)": "windows-8.1"
+    "windows-10.0.1(.*)": "windows-10"
+    "windows-10.0.22(.*)": "windows-11"
+
+# // plugins
+plugins:
+  release_vcs:
+    git:
+      allow_no_upstream: true
+
+# // coloring
+color_enabled: force
