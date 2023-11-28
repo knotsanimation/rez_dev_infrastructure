@@ -114,7 +114,7 @@ function Install-Rez {
 
     $previous_cwd = (Get-Item .).FullName
     Set-Location $rez_src
-    Start-Process python -Wait -NoNewWindow -ArgumentList "install.py --help"
+    Start-Process python -Wait -NoNewWindow -ArgumentList "install.py `"$target_dir`""
     Set-Location $previous_cwd
 
     LogDebug "removing temporary directory $temp_directory"
