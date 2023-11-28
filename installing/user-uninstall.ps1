@@ -1,5 +1,6 @@
 # global config
 $ErrorActionPreference = "Stop"
+$SCRIPTNAME = "knots-rez-uninstall"
 
 # import configuration
 . "$PSScriptRoot\config.ps1"
@@ -16,7 +17,7 @@ if (-not(Test-Path -Path $LOG_ROOT_PATH)) {
 function Log {
     param ($message, $level, $color)
     $final_message = "$level | $((Get-Date).ToString() ) [knots-install] $message"
-    Write-Host $final_message -ForegroundColor $color
+    Write-Host "$($level.PadRight(8, ' ') ) | $((Get-Date).ToString() ) [$SCRIPTNAME] $message" -ForegroundColor $color
     Out-File -FilePath $LOG_PATH -Append -InputObject "$final_message"
 }
 function LogDebug { Log @args "DEBUG" "DarkGray" }
@@ -24,6 +25,9 @@ function LogInfo { Log @args "INFO" "White" }
 function LogSucess { Log @args "SUCCESS" "Green" }
 
 function Uninstall-All {
+
+    Write-Output $( "="*80 )
+    Write-Output "[$SCRIPTNAME] uninstall Rez package manager.`n"
 
     $python_install = $KnotsInstallConfig.python_install
     $rez_install_path = $KnotsInstallConfig.rez_full_install_path
@@ -47,12 +51,15 @@ function Uninstall-All {
         LogDebug "current PATH environment variable: $current_path"
         LogDebug "setting new PATH environment variable: $new_path"
         [System.Environment]::SetEnvironmentVariable('PATH', $new_path, 'Machine')
-        LogInfo "history of the PATH variable, in case of issue, can be found at $LOG_PATH"
+        LogInfo "in case of issue, previous PATH variable can be retrieved in $LOG_PATH"
     }
 
     LogInfo "removing REZ_CONFIG_FILE environment variable"
     [Environment]::SetEnvironmentVariable('REZ_CONFIG_FILE', "", 'Machine')
-    LogSucess "finished uninstalling Knots's rez"
+
+    Write-Host $( "_"*80 ) -ForegroundColor "green"
+    LogSucess "finished uninstalling rez"
+    Write-Output $( "="*80 )
 }
 
 Uninstall-All

@@ -1,5 +1,6 @@
 # global config
 $ErrorActionPreference = "Stop"
+$SCRIPTNAME = "knots-rez-install"
 
 # import configuration
 . "$PSScriptRoot\config.ps1"
@@ -8,7 +9,7 @@ $ErrorActionPreference = "Stop"
 
 function Log {
     param ($message, $level, $color)
-    Write-Host "$level | $((Get-Date).ToString() ) [knots-install] $message" -ForegroundColor $color
+    Write-Host "$($level.PadRight(8, ' ')) | $((Get-Date).ToString() ) [$SCRIPTNAME] $message" -ForegroundColor $color
 }
 function LogDebug { Log @args "DEBUG" "DarkGray" }
 function LogInfo { Log @args "INFO" "White" }
@@ -52,7 +53,7 @@ function Install-Python {
 
     if (Test-Path -Path $target_dir) {
         LogWarning "python already installed at $target_dir"
-        return
+        return $false
     }
 
     $tmp_directory = Create-TmpDir -prefix "knots-python-install-"
@@ -73,6 +74,7 @@ function Install-Python {
 
     LogDebug "removing temporary directory $tmp_directory"
     Remove-Item $tmp_directory -Force -Recurse
+    return $true
 }
 
 function Install-Rez {
@@ -90,7 +92,7 @@ function Install-Rez {
 
     if (Test-Path -Path $target_dir) {
         LogWarning "rez already installed at $target_dir"
-        return
+        return $false
     }
 
     $rez_url = "https://github.com/AcademySoftwareFoundation/rez/archive/refs/tags/$rez_version.zip"
@@ -117,6 +119,7 @@ function Install-Rez {
 
     LogDebug "removing temporary directory $temp_directory"
     Remove-Item $temp_directory -Force -Recurse
+    return $true
 }
 
 function Install-System {
@@ -165,6 +168,8 @@ function Install-All {
 
     $config = $KnotsInstallConfig
 
+    Write-Output $("="*80)
+    Write-Output "[$SCRIPTNAME] install Rez package manager.`n"
     LogInfo "starting rez installation to $($config.knots_install_path)"
 
     # TODO uncomment
@@ -176,8 +181,10 @@ function Install-All {
         New-Item -Type Directory -Path $config.knots_install_path | Out-Null
     }
 
-    Install-Python -python_version $config.python_version -target_dir $config.python_install
-    LogSucess "installed python $($config.python_version) to $($config.python_install)"
+    $installed = Install-Python -python_version $config.python_version -target_dir $config.python_install
+    if ($installed) {
+        LogSucess "installed python $( $config.python_version ) to $( $config.python_install )"
+    }
 
     $env:PATH += ";$($config.python_install)"
 
@@ -186,13 +193,21 @@ function Install-All {
         throw "Issue with python installation, unexpected path $check_python_path"
     }
 
-    Install-Rez -rez_version $config.rez_version -target_dir $config.rez_full_install_path
-    LogSucess "installed rez $($config.rez_version) to $($config.rez_full_install_path)"
+    $installed = Install-Rez -rez_version $config.rez_version -target_dir $config.rez_full_install_path
+    if ($installed) {
+        LogSucess "installed rez $( $config.rez_version ) to $( $config.rez_full_install_path )"
+    }
 
     Install-System -rez_config_file $config.rez_config_file -rez_scripts $config.rez_scripts -env_scope "Machine"
 
-    LogSucess "installation finished; you can test it by opening a new shell and typing:"
+     if (Test-Path -Path "$HOME\.rezconfig") {
+        LogWarning "found local rezconfig at $HOME\.rezconfig; please remove to avoid issues."
+    }
+
+    Write-Host $("_"*80) -ForegroundColor "green"
+    LogSucess "installation finished ! You can test it by opening a new shell and typing:"
     LogSucess "  rez -V"
+    Write-Output $("="*80)
 }
 
 Install-All
