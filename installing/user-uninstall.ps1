@@ -26,6 +26,13 @@ function LogSucess { Log @args "SUCCESS" "Green" }
 
 function Uninstall-All {
 
+    $sys_current_role = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+    if (
+    !($sys_current_role).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    ) {
+        throw "Please restart the script in a shell with Administrator permissions."
+    }
+
     Write-Output $( "="*80 )
     Write-Output "[$SCRIPTNAME] uninstall Rez package manager.`n"
 

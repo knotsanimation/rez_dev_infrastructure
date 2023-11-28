@@ -9,7 +9,7 @@ $SCRIPTNAME = "knots-rez-install"
 
 function Log {
     param ($message, $level, $color)
-    Write-Host "$($level.PadRight(8, ' ')) | $((Get-Date).ToString() ) [$SCRIPTNAME] $message" -ForegroundColor $color
+    Write-Host "$($level.PadRight(8, ' ') ) | $((Get-Date).ToString() ) [$SCRIPTNAME] $message" -ForegroundColor $color
 }
 function LogDebug { Log @args "DEBUG" "DarkGray" }
 function LogInfo { Log @args "INFO" "White" }
@@ -166,18 +166,25 @@ function Install-System {
 
 function Install-All {
 
+    $sys_current_role = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+    if (
+    !($sys_current_role).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    ) {
+        throw "Please restart the script in a shell with Administrator permissions."
+    }
+
     $config = $KnotsInstallConfig
 
-    Write-Output $("="*80)
+    Write-Output $( "="*80 )
     Write-Output "[$SCRIPTNAME] install Rez package manager.`n"
-    LogInfo "starting rez installation to $($config.knots_install_path)"
+    LogInfo "starting rez installation to $( $config.knots_install_path )"
 
     # TODO uncomment
     #if (-not (Test-Path -Path $rez_config_file)) {
     #    throw "Rez config file does not exists, check your properly mapped the NAS drives."
     #}
     if (-not(Test-Path -Path $config.knots_install_path)) {
-        LogInfo "creating $($config.knots_install_path)"
+        LogInfo "creating $( $config.knots_install_path )"
         New-Item -Type Directory -Path $config.knots_install_path | Out-Null
     }
 
@@ -186,10 +193,10 @@ function Install-All {
         LogSucess "installed python $( $config.python_version ) to $( $config.python_install )"
     }
 
-    $env:PATH += ";$($config.python_install)"
+    $env:PATH += ";$( $config.python_install )"
 
     $check_python_path = (Get-Command python).Path
-    if (-not($check_python_path -eq "$($config.python_install)\python.exe")) {
+    if (-not($check_python_path -eq "$( $config.python_install )\python.exe")) {
         throw "Issue with python installation, unexpected path $check_python_path"
     }
 
@@ -200,14 +207,14 @@ function Install-All {
 
     Install-System -rez_config_file $config.rez_config_file -rez_scripts $config.rez_scripts -env_scope "Machine"
 
-     if (Test-Path -Path "$HOME\.rezconfig") {
+    if (Test-Path -Path "$HOME\.rezconfig") {
         LogWarning "found local rezconfig at $HOME\.rezconfig; please remove to avoid issues."
     }
 
-    Write-Host $("_"*80) -ForegroundColor "green"
+    Write-Host $( "_"*80 ) -ForegroundColor "green"
     LogSucess "installation finished ! You can test it by opening a new shell and typing:"
     LogSucess "  rez -V"
-    Write-Output $("="*80)
+    Write-Output $( "="*80 )
 }
 
 Install-All
