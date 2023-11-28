@@ -14,6 +14,16 @@ function LogWarning { Log @args "WARNING" "Yellow" }
 function LogError { Log @args "ERROR" "Red" }
 
 function Create-TmpDir {
+    <#
+    .SYNOPSIS
+        Create a directory in the standard temporary location. User is respondible of removing it.
+
+    .PARAMETER prefix
+        prefix for the directory name
+
+    .OUTPUTS
+        Filesystem path of the directory created.
+    #>
     param([string]$prefix)
     $tmp_root = [System.IO.Path]::GetTempPath()
     $tmp_directory = "$tmp_root\$prefix$( New-Guid )"
@@ -25,6 +35,16 @@ function Create-TmpDir {
 # // Installation Code
 
 function Install-Python {
+    <#
+    .SYNOPSIS
+        Install a working python version at the given path.
+
+    .PARAMETER python_version
+        Full python version to install, must be available on Nuget.
+
+    .PARAMETER target_dir
+        Filesystem path to a directory to install python to.
+    #>
     param([string]$python_version, [string]$target_dir)
 
     if (Test-Path -Path $python_install) {
@@ -53,6 +73,16 @@ function Install-Python {
 }
 
 function Install-Rez {
+    <#
+    .SYNOPSIS
+        Install a working rez version at the given path. Assume that python is installed on the system.
+
+    .PARAMETER rez_version
+        Full rez version to install, must be available on GitHub.
+
+    .PARAMETER target_dir
+        Filesystem path to a directory to install rez to.
+    #>
     param([string]$rez_version, [string]$target_dir)
 
     if (Test-Path -Path $target_dir) {
@@ -87,6 +117,19 @@ function Install-Rez {
 }
 
 function Install-System {
+    <#
+    .SYNOPSIS
+        Configure the system so rez can be used.
+
+    .PARAMETER rez_config_file
+        Filesystem path to the rez config file to use for rez.
+
+    .PARAMETER rez_scripts
+        Filesystem path to the location of the rez /Scripts directory.
+
+    .PARAMETER env_scope
+        Name of the scope for environment variable. Ex: "Machine"
+    #>
     param([string]$rez_config_file, [string]$rez_scripts, [string]$env_scope)
 
     # query from global system as we already modified PATH for this session
@@ -130,7 +173,7 @@ function Install-All {
     $env:PATH += ";$python_install"
 
     $check_python_path = (Get-Command python).Path
-    if (-not ($check_python_path -eq "$python_install\python.exe")) {
+    if (-not($check_python_path -eq "$python_install\python.exe")) {
         throw "Issue with python installation, unexpected path $check_python_path"
     }
 
