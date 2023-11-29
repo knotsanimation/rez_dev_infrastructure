@@ -21,6 +21,7 @@ def build():
             Path("windows") / "README.md",
         ]
     )
+    rezbuild_utils.set_installed_path_read_only()
     LOGGER.info("finished")
 
 
