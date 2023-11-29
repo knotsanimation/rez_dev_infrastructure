@@ -4,11 +4,14 @@ rez configuration files. See https://rez.readthedocs.io/en/latest/configuring_re
 
 # prerequisites
 
+[//]: # (TODO update when suite created for pipeline deployment)
+
 For `deploy.py` :
 
 - git is available on the system
 - environment variable `KNOTS_SKYNET_PATH` is set
 - user have access to the Knots filesystem
+- `pythonning` package is resolved
 
 # workflow
 
@@ -17,8 +20,8 @@ For `deploy.py` :
 - edit your config  
 - commit your change
 - merge to main if you were in a branch
-- run the `deploy.py` script like `python deploy.py`
-- inform pipeline team the config has been deployed
+- deploy as per the usual guidelines (TODO: add doc link)
+
 
 ## creating a new config file
 
