@@ -22,6 +22,11 @@ platform_map:
     "windows-10.0.1(.*)": "windows-10"
     "windows-10.0.22(.*)": "windows-11"
 
+# // caching
+cache_packages_path: "~\\rez\\.cache"
+# bold choice ? let's see what it does ...
+default_cachable: true
+
 # // plugins
 plugins:
   release_vcs:
