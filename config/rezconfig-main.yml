@@ -24,8 +24,7 @@ platform_map:
 
 # // caching
 cache_packages_path: "~\\rez\\.cache"
-# bold choice ? let's see what it does ...
-default_cachable: true
+default_cachable: false
 
 # // plugins
 plugins:
