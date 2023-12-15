@@ -210,6 +210,13 @@ function Install-All {
 
     Install-System -rez_config_file $config.rez_config_file -rez_scripts $config.rez_scripts -env_scope $config.env_var_scope
 
+    # rez doesn't create its cache directory automatically :/
+    $rez_cache_dir = $config.rez_cache_path
+    if (-not(Test-Path -Path $rez_cache_dir)) {
+        LogInfo "creating $( $rez_cache_dir )"
+        New-Item -Type Directory -Path $rez_cache_dir -ea 0 | Out-Null
+    }
+
     if (Test-Path -Path "$HOME\.rezconfig") {
         LogWarning "found local rezconfig at $HOME\.rezconfig; please remove to avoid issues."
     }

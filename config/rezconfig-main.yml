@@ -23,6 +23,7 @@ platform_map:
     "windows-10.0.22(.*)": "windows-11"
 
 # // caching
+# have to be kept in sync with ../installing/windows/config.ps1
 cache_packages_path: "~\\rez\\.cache"
 default_cachable: false
 

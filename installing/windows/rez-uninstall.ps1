@@ -45,6 +45,7 @@ function Uninstall-All {
     $python_install = $KnotsInstallConfig.python_install
     $rez_install_path = $KnotsInstallConfig.rez_full_install_path
     $rez_scripts_path = $KnotsInstallConfig.rez_scripts
+    $rez_cache_path = $KnotsInstallConfig.rez_cache_path
     $env_var_scope = $KnotsInstallConfig.env_var_scope
 
     if (Test-Path -Path $rez_install_path) {
@@ -54,6 +55,10 @@ function Uninstall-All {
     if (Test-Path -Path $python_install) {
         LogInfo "removing $python_install ..."
         Remove-Item $python_install -Recurse -Force
+    }
+    if (Test-Path -Path $rez_cache_path) {
+        LogInfo "removing $rez_cache_path ..."
+        Remove-Item $rez_cache_path -Recurse -Force
     }
 
     # unset PATH environment variable if needed

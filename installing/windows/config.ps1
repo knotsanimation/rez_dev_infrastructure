@@ -1,4 +1,4 @@
-$INSTALLER_VERSION = "0.1.1"
+$INSTALLER_VERSION = "0.2.0"
 
 $KnotsInstallConfig = @{
     rez_version = ''
@@ -25,5 +25,6 @@ $KnotsInstallConfig.python_install = "$($KnotsInstallConfig.knots_install_path)\
 $KnotsInstallConfig.rez_full_install_path = "$($KnotsInstallConfig.knots_install_path)\rez"
 $KnotsInstallConfig.rez_scripts = "$($KnotsInstallConfig.rez_full_install_path)\Scripts\rez"
 $KnotsInstallConfig.rez_config_file = "$_knots_skynet_path\apps\rez\config\rezconfig-main.yml"
+$KnotsInstallConfig.rez_cache_path = "$HOME\rez\.cache"
 $KnotsInstallConfig.uninstall_log_path = "$($KnotsInstallConfig.knots_install_path)\user-uninstall.log"
 $KnotsInstallConfig.env_var_scope = "User"
