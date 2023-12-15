@@ -21,7 +21,7 @@ Scripts to install rez on Windows machines.
 
 ### Steps
 
-- Open a new powershell terminal session **with Administrator permissions**.
+- Open a new powershell terminal session.
 - Allow execution of powersheel scripts if not already :
     ```powershell
     > Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
