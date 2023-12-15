@@ -169,13 +169,6 @@ function Install-System {
 
 function Install-All {
 
-    $sys_current_role = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
-    if (
-    !($sys_current_role).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-    ) {
-        throw "Please restart the script in a shell with Administrator permissions."
-    }
-
     $config = $KnotsInstallConfig
 
     Write-Output $( "="*80 )

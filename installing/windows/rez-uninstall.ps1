@@ -26,13 +26,6 @@ function LogSucess { Log @args "SUCCESS" "Green" }
 
 function Uninstall-All {
 
-    $sys_current_role = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
-    if (
-    !($sys_current_role).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-    ) {
-        throw "Please restart the script in a shell with Administrator permissions."
-    }
-
     # ensure that we are not uninstalling stuff that have never been installed ...
     $installed_version = [System.Environment]::GetEnvironmentVariable('KNOTS_REZ_INSTALLER_VERSION', $KnotsInstallConfig.env_var_scope)
     if (-not ($installed_version -eq $INSTALLER_VERSION)){
