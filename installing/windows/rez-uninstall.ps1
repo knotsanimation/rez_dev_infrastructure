@@ -72,6 +72,9 @@ function Uninstall-All {
     LogInfo "removing KNOTS_REZ_INSTALLER_VERSION environment variable"
     [Environment]::SetEnvironmentVariable('KNOTS_REZ_INSTALLER_VERSION', "", $env_var_scope)
 
+    LogInfo "removing KNOTS_USER_ROOT_PATH environment variable"
+    [Environment]::SetEnvironmentVariable('KNOTS_USER_ROOT_PATH', "", $env_var_scope)
+
     Write-Host $( "_"*80 ) -ForegroundColor "green"
     LogSucess "finished uninstalling rez"
     Write-Output $( "="*80 )

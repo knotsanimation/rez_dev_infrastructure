@@ -136,7 +136,7 @@ function Install-System {
     .PARAMETER env_scope
         Name of the scope for environment variable. Ex: "Machine"
     #>
-    param([string]$rez_config_file, [string]$rez_scripts, [string]$env_scope)
+    param([string]$rez_config_file, [string]$rez_scripts, [string]$knots_install_path, [string]$env_scope)
 
     # query from global system as we already modified PATH for this session
     $current_var = [Environment]::GetEnvironmentVariable("PATH", $env_scope)
@@ -164,6 +164,9 @@ function Install-System {
 
     LogInfo "setting environment variable KNOTS_REZ_INSTALLER_VERSION with $INSTALLER_VERSION"
     [Environment]::SetEnvironmentVariable('KNOTS_REZ_INSTALLER_VERSION', $INSTALLER_VERSION, $env_scope)
+
+    LogInfo "setting environment variable KNOTS_USER_ROOT_PATH with $knots_install_path"
+    [Environment]::SetEnvironmentVariable('KNOTS_USER_ROOT_PATH', $knots_install_path, $env_scope)
 
 }
 
@@ -201,7 +204,11 @@ function Install-All {
         LogSucess "installed rez $( $config.rez_version ) to $( $config.rez_full_install_path )"
     }
 
-    Install-System -rez_config_file $config.rez_config_file -rez_scripts $config.rez_scripts -env_scope $config.env_var_scope
+    Install-System `
+    -rez_config_file $config.rez_config_file `
+    -rez_scripts $config.rez_scripts `
+    -knots_install_path $config.knots_install_path `
+    -env_scope $config.env_var_scope
 
     # rez doesn't create its cache directory automatically :/
     $rez_cache_dir = $config.rez_cache_path
