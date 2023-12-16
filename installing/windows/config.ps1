@@ -1,4 +1,4 @@
-$INSTALLER_VERSION = "1.0.0"
+$INSTALLER_VERSION = "1.1.0"
 
 $KnotsInstallConfig = @{
     rez_version = ''
