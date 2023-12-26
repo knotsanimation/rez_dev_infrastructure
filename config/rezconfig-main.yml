@@ -9,7 +9,7 @@ release_packages_path: "${KNOTS_SKYNET_PATH}\\packages"
 
 package_definition_python_path: "${KNOTS_SKYNET_PATH}\\apps\\rez\\extensions\\include"
 plugin_path:
-  - "${KNOTS_SKYNET_PATH}\\apps\\rez\\extensions\\rezplugins"
+  - "${KNOTS_SKYNET_PATH}\\apps\\rez\\extensions"
 
 # // environment
 default_shell: "powershell"
