@@ -194,7 +194,11 @@ def main():
 
         LOGGER.info(f"installing {package_id} ...")
         config = get_package_config(package_name)
-        installed = install_package_config(config, specific_version=package_version)
+        installed = install_package_config(
+            config,
+            specific_version=package_version,
+            release=cli.release,
+        )
         LOGGER.info(f"installed {len(installed)} packages")
 
     LOGGER.info("finished")
