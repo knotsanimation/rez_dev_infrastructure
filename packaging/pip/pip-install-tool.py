@@ -123,11 +123,12 @@ def install_package_config(
 
             for python_version in python_versions:
                 python_exe = get_python_executable(python_version)
+                prefix = f"{pip_name}{pip_version}:{python_version}"
 
                 LOGGER.debug(
                     f"{pip_name=}, {pip_version=}, {python_version=}, {python_exe=}, {callback=}"
                 )
-                LOGGER.info(f"[{pip_version}:{python_version}] calling rez_pip ...")
+                LOGGER.info(f"[{prefix}] calling rez_pip ...")
                 packages = rez_pip.main.run_installation_for_python(
                     pipPackageNames=[f"{pip_name}{pip_version}"],
                     pythonVersion=python_version,
@@ -137,8 +138,13 @@ def install_package_config(
                     rezPackageCreationCallback=callback,
                     rezRelease=release,
                 )
+                installed_packages = [
+                    package for package in packages if package.installed_variants
+                ]
                 LOGGER.info(
-                    f"[{pip_version}:{python_version}] installed {len(packages)} packages"
+                    f"[{prefix}] installed "
+                    f"{len(installed_packages)} packages, skipped "
+                    f"{len(packages) - len(installed_packages)}."
                 )
                 installed += packages
 
@@ -176,6 +182,32 @@ def get_cli():
     return parsed
 
 
+def generate_report_str(
+    processed_packages: list[rez.package_maker.PackageMaker],
+) -> str:
+    """
+    Args:
+        processed_packages: list of PackageMaker that have been "closed", i.e. processed.
+
+    Returns:
+        a human-readable string
+    """
+    brief_str = [f"processed {len(processed_packages)} packages:"]
+    brief_str += ["installed:"]
+    brief_str += [
+        f"  - {[f'{variant.name}-{variant.version}' for variant in package.installed_variants]}"
+        for package in processed_packages
+        if package.installed_variants
+    ]
+    brief_str += ["skipped:"]
+    brief_str += [
+        f"  - {[f'{variant.name}-{variant.version}' for variant in package.skipped_variants]}"
+        for package in processed_packages
+        if package.skipped_variants
+    ]
+    return "\n".join(brief_str)
+
+
 def main():
     LOGGER.info("started")
 
@@ -192,14 +224,14 @@ def main():
             package_name = package_id[0]
             package_version = None
 
-        LOGGER.info(f"installing {package_id} ...")
+        LOGGER.info(f"installing {package_name} ...")
         config = get_package_config(package_name)
-        installed = install_package_config(
+        processed_packages = install_package_config(
             config,
             specific_version=package_version,
             release=cli.release,
         )
-        LOGGER.info(f"installed {len(installed)} packages")
+        LOGGER.info(generate_report_str(processed_packages))
 
     LOGGER.info("finished")
 
