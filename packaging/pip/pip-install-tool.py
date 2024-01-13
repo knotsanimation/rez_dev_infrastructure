@@ -33,6 +33,7 @@ import logging
 import shutil
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 import runpy
 from typing import Callable
@@ -118,6 +119,8 @@ def install_package_config(
             pip_version: str = version_config["version"]
             python_versions: list[str] = version_config["pythons"]
             callback: Optional[Callable] = version_config.get("callback", None)
+            work_dir = tmp_dir / str(uuid.uuid4())
+            work_dir.mkdir()
 
             if specific_version and pip_version != specific_version:
                 continue
@@ -141,7 +144,7 @@ def install_package_config(
                     pythonVersion=python_version,
                     pythonExecutable=python_exe,
                     pipPath=Path(rez_pip.pip.getBundledPip()),
-                    pipWorkArea=tmp_dir,
+                    pipWorkArea=work_dir,
                     rezPackageCreationCallback=_callback,
                     rezRelease=release,
                 )
