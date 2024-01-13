@@ -29,6 +29,8 @@ Install all versions of ``sphinx`` configured, and only ``pytest-7.4.3``.
     rez-python pip-install-tool.py sphinx pytest:==7.4.3
 """
 import argparse
+import dataclasses
+import distutils.dist
 import logging
 import shutil
 import sys
@@ -40,7 +42,7 @@ from typing import Callable
 from typing import Optional
 
 import rez.package_maker
-import rez.resolved_context
+import rez.version
 import rez_pip.main
 import rez_pip.pip
 import rez_pip.rez
@@ -66,15 +68,15 @@ def get_python_executable(version: str) -> Path:
     return rez_pip.rez.getPythonExecutable(python_package)
 
 
-def get_package_config(package_name: str) -> dict:
+def find_package_config_path(package_name: str) -> Path:
     """
-    Return the pip installation configuration for given package.
+    Return the python configuration file for given package name.
 
     Args:
-        package_name: must be the name of a file in the packages directory.
+        package_name: must be the name of a file in the ``packages/`` directory.
 
     Returns:
-        configuration extracted form the ``CONFIG`` global variable.
+        filesystem path to an existing file
     """
     package = [
         package for package in PACKAGESDIR.glob("*.py") if package.stem == package_name
@@ -84,80 +86,140 @@ def get_package_config(package_name: str) -> dict:
             f"Did not found package {package_name} in {PACKAGESDIR}"
         )
 
-    path = package[0]
-
-    script_dict = runpy.run_path(str(path), run_name="__main__")
-    config = script_dict["CONFIG"]
-    return config
+    return package[0]
 
 
-def install_package_config(
-    package_config: dict,
-    specific_version: Optional[str] = None,
-    release: bool = False,
-) -> list[rez.package_maker.PackageMaker]:
+@dataclasses.dataclass(frozen=True)
+class PackageInstallVersion:
     """
-    Call rez_pip for the given config.
+    All the necessary information to install a pip package with rez_pip.
+
+    Usually serialized on disk as python files.
+    """
+
+    pip_name: str
+    """
+    Name of the package on pip
+    """
+
+    pip_version: str
+    """
+    Version of the package on pip.
+    
+    Might be an empty string which implies "latest".
+    """
+
+    python_versions: tuple[str]
+    """
+    List of exact python versions it must be installed for.
+    
+    Exact imply major+minor+patch.
+    """
+
+    callback: Optional[
+        Callable[
+            [
+                rez.package_maker.PackageMaker,
+                distutils.dist.Distribution,
+                rez.version.Version,
+            ],
+            bool,
+        ]
+    ] = None
+    """
+    Optional object called during the creation of each rez packages for the pip package
+    and its dependencies.
+    """
+
+    @property
+    def pip_query(self) -> str:
+        return f"{self.pip_name}{self.pip_version}"
+
+    @classmethod
+    def from_dict(cls, src_dict: dict) -> "PackageInstallVersion":
+        return cls(
+            pip_name=src_dict["name"],
+            pip_version=src_dict["version"],
+            python_versions=tuple(src_dict["pythons"]),
+            callback=src_dict.get("callback", None),
+        )
+
+    @classmethod
+    def read_from_file(cls, file_path: Path) -> list["PackageInstallVersion"]:
+        script_dict = runpy.run_path(str(file_path), run_name="__main__")
+        raw_config = script_dict["CONFIG"]
+        package_name = raw_config["name"]
+
+        instances = []
+
+        for version_config in raw_config["versions"]:
+            version_config["name"] = package_name
+            instances.append(cls.from_dict(version_config))
+
+        return instances
+
+    def get_python_executables(self) -> dict[str, Path]:
+        """
+        Find the python executable to use for the specified python versions using rez.
+        """
+        return {
+            version: get_python_executable(version) for version in self.python_versions
+        }
+
+
+def install_package_version(
+    package_version: PackageInstallVersion,
+    release: bool = False,
+) -> dict[str, list[rez.package_maker.PackageMaker]]:
+    """
+    Call rez_pip for the given install configuration.
 
     Args:
-        package_config: dict in a specific structure
-        specific_version: the version specified in the config to install
+        package_version: object describing the installation to perform
         release: True to deploy the packages instead of just building them locally
-    """
-    pip_name: str = package_config["name"]
-    version_configs: list[dict] = package_config["versions"]
 
-    tmp_dir = Path(tempfile.mkdtemp(suffix=Path(__file__).name))
-    installed = []
+    Returns:
+        package processed per python version
+    """
+    installed: dict[str, list[rez.package_maker.PackageMaker]] = {}
+
+    tmp_dir = Path(
+        tempfile.mkdtemp(suffix=Path(__file__).name, prefix=package_version.pip_name)
+    )
 
     try:
-        tmp_dir = tmp_dir / pip_name
-        tmp_dir.mkdir()
+        for (
+            python_version,
+            python_exe,
+        ) in package_version.get_python_executables().items():
+            prefix = f"{package_version.pip_name}{package_version.pip_version}:{python_version}"
 
-        for version_config in version_configs:
-            # might be an empty string which means latest
-            pip_version: str = version_config["version"]
-            python_versions: list[str] = version_config["pythons"]
-            callback: Optional[Callable] = version_config.get("callback", None)
-            work_dir = tmp_dir / str(uuid.uuid4())
-            work_dir.mkdir()
+            def _callback(package, *args):
+                if package_version.callback:
+                    _patched = package_version.callback(package, *args)
+                    if _patched:
+                        setattr(package, PATCHED_ATTR, True)
 
-            if specific_version and pip_version != specific_version:
-                continue
-
-            for python_version in python_versions:
-                python_exe = get_python_executable(python_version)
-                prefix = f"{pip_name}{pip_version}:{python_version}"
-
-                def _callback(package, *args):
-                    if callback:
-                        _patched = callback(package, *args)
-                        if _patched:
-                            setattr(package, PATCHED_ATTR, True)
-
-                LOGGER.debug(
-                    f"{pip_name=}, {pip_version=}, {python_version=}, {python_exe=}, {callback=}"
-                )
-                LOGGER.info(f"[{prefix}] calling rez_pip ...")
-                packages = rez_pip.main.run_installation_for_python(
-                    pipPackageNames=[f"{pip_name}{pip_version}"],
-                    pythonVersion=python_version,
-                    pythonExecutable=python_exe,
-                    pipPath=Path(rez_pip.pip.getBundledPip()),
-                    pipWorkArea=work_dir,
-                    rezPackageCreationCallback=_callback,
-                    rezRelease=release,
-                )
-                installed_packages = [
-                    package for package in packages if package.installed_variants
-                ]
-                LOGGER.info(
-                    f"[{prefix}] installed "
-                    f"{len(installed_packages)} packages, skipped "
-                    f"{len(packages) - len(installed_packages)}, patched "
-                    f"{len([package for package in packages if hasattr(package, PATCHED_ATTR)])}."
-                )
-                installed += packages
+            LOGGER.info(f"[{prefix}] calling rez_pip ...")
+            packages = rez_pip.main.run_installation_for_python(
+                pipPackageNames=[package_version.pip_query],
+                pythonVersion=python_version,
+                pythonExecutable=python_exe,
+                pipPath=Path(rez_pip.pip.getBundledPip()),
+                pipWorkArea=tmp_dir,
+                rezPackageCreationCallback=_callback,
+                rezRelease=release,
+            )
+            installed_packages = [
+                package for package in packages if package.installed_variants
+            ]
+            LOGGER.info(
+                f"[{prefix}] installed "
+                f"{len(installed_packages)} packages, skipped "
+                f"{len(packages) - len(installed_packages)}, patched "
+                f"{len([package for package in packages if hasattr(package, PATCHED_ATTR)])}."
+            )
+            installed[python_version] = packages
 
     finally:
         LOGGER.debug(f"removing {tmp_dir}")
@@ -194,8 +256,10 @@ def get_cli():
 
 
 def generate_report_str(
-    processed_packages: list[rez.package_maker.PackageMaker],
-) -> str:
+    processed_packages: dict[
+        PackageInstallVersion, dict[str, list[rez.package_maker.PackageMaker]]
+    ],
+) -> list[str]:
     """
     Args:
         processed_packages: list of PackageMaker that have been "closed", i.e. processed.
@@ -203,26 +267,38 @@ def generate_report_str(
     Returns:
         a human-readable string
     """
-    brief_str = [f"processed {len(processed_packages)} packages:"]
-    brief_str += ["installed:"]
-    brief_str += [
-        f"  - {[f'{variant.name}-{variant.version}' for variant in package.installed_variants]}"
-        for package in processed_packages
-        if package.installed_variants
-    ]
-    brief_str += ["skipped:"]
-    brief_str += [
-        f"  - {[f'{variant.name}-{variant.version}' for variant in package.skipped_variants]}"
-        for package in processed_packages
-        if package.skipped_variants
-    ]
-    brief_str += ["patched:"]
-    brief_str += [
-        f"  - {package.name}"
-        for package in processed_packages
-        if hasattr(package, PATCHED_ATTR)
-    ]
-    return "\n".join(brief_str)
+    out_str: list[str] = []
+    indent = " " * 4
+
+    for package_install, package_installed in processed_packages.items():
+        for python_version, packages in package_installed.items():
+            out_str += [
+                f"[{package_install.pip_query}][python-{python_version}] {len(packages)} processed:"
+            ]
+
+            msg = []
+            msg += ["installed:"]
+            msg += [
+                f"  - {[f'{variant.name}-{variant.version}' for variant in package.installed_variants]}"
+                for package in packages
+                if package.installed_variants
+            ]
+            msg += ["skipped:"]
+            msg += [
+                f"  - {[f'{variant.name}-{variant.version}' for variant in package.skipped_variants]}"
+                for package in packages
+                if package.skipped_variants
+            ]
+            msg += ["patched:"]
+            msg += [
+                f"  - {package.name}"
+                for package in packages
+                if hasattr(package, PATCHED_ATTR)
+            ]
+            msg = [indent + line for line in msg]
+            out_str += msg
+
+    return out_str
 
 
 def main():
@@ -233,22 +309,37 @@ def main():
     if cli.debug:
         LOGGER.setLevel(logging.DEBUG)
 
-    for package_id in cli.package_names:
-        package_id = package_id.split(":", 1)
-        if len(package_id) == 2:
-            package_name, package_version = package_id
-        else:
-            package_name = package_id[0]
-            package_version = None
+    all_packages = {}
 
-        LOGGER.info(f"installing {package_name} ...")
-        config = get_package_config(package_name)
-        processed_packages = install_package_config(
-            config,
-            specific_version=package_version,
-            release=cli.release,
-        )
-        LOGGER.info(generate_report_str(processed_packages))
+    for user_package_id in cli.package_names:
+        LOGGER.info(f"processing {user_package_id} ...")
+
+        _user_package_id = user_package_id.split(":", 1)
+        if len(_user_package_id) == 2:
+            user_package_name, user_package_version = user_package_id
+        else:
+            user_package_name = _user_package_id[0]
+            user_package_version = None
+
+        config_path = find_package_config_path(user_package_name)
+        package_versions = PackageInstallVersion.read_from_file(config_path)
+
+        for package_version in package_versions:
+            if (
+                user_package_version
+                and package_version.pip_version != user_package_version
+            ):
+                continue
+
+            processed_packages = install_package_version(
+                package_version=package_version,
+                release=cli.release,
+            )
+            all_packages[package_version] = processed_packages
+
+    msg = generate_report_str(all_packages)
+    msg = "\n".join(msg)
+    LOGGER.info(f"processed {len(all_packages)} versions:\n{msg}")
 
     LOGGER.info("finished")
 
