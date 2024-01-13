@@ -48,6 +48,7 @@ LOGGER = logging.getLogger(__name__)
 
 THISDIR = Path(__file__).parent
 PACKAGESDIR = THISDIR / "packages"
+PATCHED_ATTR = "rez_pip_patched"
 
 
 def get_python_executable(version: str) -> Path:
@@ -125,6 +126,12 @@ def install_package_config(
                 python_exe = get_python_executable(python_version)
                 prefix = f"{pip_name}{pip_version}:{python_version}"
 
+                def _callback(package, *args):
+                    if callback:
+                        _patched = callback(package, *args)
+                        if _patched:
+                            setattr(package, PATCHED_ATTR, True)
+
                 LOGGER.debug(
                     f"{pip_name=}, {pip_version=}, {python_version=}, {python_exe=}, {callback=}"
                 )
@@ -135,7 +142,7 @@ def install_package_config(
                     pythonExecutable=python_exe,
                     pipPath=Path(rez_pip.pip.getBundledPip()),
                     pipWorkArea=tmp_dir,
-                    rezPackageCreationCallback=callback,
+                    rezPackageCreationCallback=_callback,
                     rezRelease=release,
                 )
                 installed_packages = [
@@ -144,7 +151,8 @@ def install_package_config(
                 LOGGER.info(
                     f"[{prefix}] installed "
                     f"{len(installed_packages)} packages, skipped "
-                    f"{len(packages) - len(installed_packages)}."
+                    f"{len(packages) - len(installed_packages)}, patched "
+                    f"{len([package for package in packages if hasattr(package, PATCHED_ATTR)])}."
                 )
                 installed += packages
 
@@ -204,6 +212,12 @@ def generate_report_str(
         f"  - {[f'{variant.name}-{variant.version}' for variant in package.skipped_variants]}"
         for package in processed_packages
         if package.skipped_variants
+    ]
+    brief_str += ["patched:"]
+    brief_str += [
+        f"  - {package.name}"
+        for package in processed_packages
+        if hasattr(package, PATCHED_ATTR)
     ]
     return "\n".join(brief_str)
 
