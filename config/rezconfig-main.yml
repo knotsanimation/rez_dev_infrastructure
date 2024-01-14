@@ -28,10 +28,20 @@ cache_packages_path: "~\\rez\\.cache"
 default_cachable: false
 
 # // plugins
+
+# configure plugins settings
 plugins:
   release_vcs:
     git:
       allow_no_upstream: true
+  release_hook:
+    doc_publish:
+      publish_command_attr_name: doc_publish_command
+      publish_require_attr_name: doc_publish_requires
+
+# enable plugins
+release_hooks:
+  - doc_publish
 
 # // coloring
 color_enabled: force
