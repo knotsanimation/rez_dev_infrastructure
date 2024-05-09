@@ -4,6 +4,7 @@ import os
 import shutil
 import datetime
 import sys
+import tempfile
 from pathlib import Path
 
 from pythonning.filesystem import set_path_read_only
@@ -24,13 +25,16 @@ CONFIGS_DST_PATH = KNOTS_SKYNET_PATH / "apps" / "rez" / "config"
 assert CONFIGS_DST_PATH.exists()
 
 
-def deploy_config(config_path: Path, target_dir: Path):
-    config_dst_path = target_dir / config_path.name
-    LOGGER.debug(f"copying {config_path} to {config_dst_path}")
-    # overwrite if exists
-    shutil.copy2(config_path, config_dst_path, follow_symlinks=False)
+def deploy_config(config_path: Path, target_dir: Path, tmp_dir: Path):
+    _tmp_dir = tmp_dir / config_path.name
+    LOGGER.debug(f"working in '{_tmp_dir}'")
+    _tmp_dir.mkdir()
 
-    config_content = config_dst_path.read_text()
+    tmp_path = _tmp_dir / config_path.name
+    LOGGER.debug(f"copying {config_path} to {tmp_path}")
+    shutil.copy2(config_path, tmp_path, follow_symlinks=False)
+
+    config_content = tmp_path.read_text()
     header = (
         f"# deployed on {datetime.datetime.utcnow()} by {getpass.getuser()}\n"
         f"# last commit = {get_current_commit_hash()}\n"
@@ -38,16 +42,21 @@ def deploy_config(config_path: Path, target_dir: Path):
     )
     new_config_content = header + config_content
     LOGGER.debug(f"adding header to dst config.")
-    config_dst_path.write_text(new_config_content)
+    tmp_path.write_text(new_config_content)
+
+    dst_config_path = target_dir / config_path.name
+    # overwrite if exists
+    shutil.copy2(tmp_path, dst_config_path, follow_symlinks=False)
 
     LOGGER.debug(f"setting dst config to read-only")
-    set_path_read_only(config_dst_path)
+    set_path_read_only(dst_config_path)
 
 
 def deploy():
-    for config_src_path in CONFIGS_SRC_PATHS:
-        LOGGER.info(f"deploying <{config_src_path}>")
-        deploy_config(config_src_path, CONFIGS_DST_PATH)
+    with tempfile.TemporaryDirectory(prefix="rez-config-deploy-") as tmp_dir:
+        for config_src_path in CONFIGS_SRC_PATHS:
+            LOGGER.info(f"deploying <{config_src_path}>")
+            deploy_config(config_src_path, CONFIGS_DST_PATH, Path(tmp_dir))
 
     LOGGER.info("finished")
 
