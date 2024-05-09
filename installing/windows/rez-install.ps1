@@ -1,9 +1,7 @@
 # global config
 $ErrorActionPreference = "Stop"
 $SCRIPTNAME = "knots-rez-install"
-
-# import configuration
-. "$PSScriptRoot\config.ps1"
+$INSTALLER_VERSION = "2.0.0"
 
 # // Utility code
 
@@ -122,108 +120,65 @@ function Install-Rez {
     return $true
 }
 
-function Install-System {
-    <#
-    .SYNOPSIS
-        Configure the system so rez can be used.
 
-    .PARAMETER rez_config_file
-        Filesystem path to the rez config file to use for rez.
+function Install-All {
 
-    .PARAMETER rez_scripts
-        Filesystem path to the location of the rez /Scripts directory.
+    # we retrieve parameters from the environment
+    $knots_install_path = "$Env:KNOTS_LOCAL_INSTALL_PATH"
+    $python_version = "$Env:REZ_PYTHON_VERSION"
+    $python_install = "$Env:KNOTS_LOCAL_PYTHON_INSTALL_PATH"
+    $rez_version = "$Env:REZ_VERSION"
+    $rez_full_install_path = "$Env:KNOTS_LOCAL_REZ_INSTALL_PATH"
+    $rez_cache_dir = "$Env:REZ_CACHE_PACKAGES_PATH"
+    $env_scope = "User"
 
-    .PARAMETER env_scope
-        Name of the scope for environment variable. Ex: "Machine"
-    #>
-    param([string]$rez_config_file, [string]$rez_scripts, [string]$knots_install_path, [string]$env_scope)
-
-    # query from global system as we already modified PATH for this session
-    $current_var = [Environment]::GetEnvironmentVariable("PATH", $env_scope)
-
-    if (-not($current_var.Split(';').contains($rez_scripts))) {
-        LogDebug "got environment variable PATH=$current_var"
-
-        $path_delimiter = ";"
-        if ( $current_var.EndsWith(";")) {
-            $path_delimiter = ""
-        }
-        $new_path_var = $current_var + "$path_delimiter$rez_scripts"
-
-        LogInfo "setting environment variable PATH with $new_path_var"
-        [Environment]::SetEnvironmentVariable('PATH', $new_path_var, $env_scope)
-    }
-    else {
-        LogDebug "environment variable PATH is already set as expected"
+    # ensure user has uninstalled before installing
+    $installed_version = [System.Environment]::GetEnvironmentVariable('KNOTS_REZ_INSTALLER_VERSION', $env_scope)
+    if ($installed_version){
+        throw "Please use the uninstaller v$installed_version first before installing."
     }
 
-    $current_var = [Environment]::GetEnvironmentVariable("REZ_CONFIG_FILE", $env_scope)
-    LogDebug "got environment variable REZ_CONFIG_FILE=$current_var"
-    LogInfo "setting environment variable REZ_CONFIG_FILE with $rez_config_file"
-    [Environment]::SetEnvironmentVariable('REZ_CONFIG_FILE', $rez_config_file, $env_scope)
+    Write-Output $( "="*80 )
+    Write-Output "[$SCRIPTNAME v$INSTALLER_VERSION] install Rez package manager.`n"
+    LogInfo "starting rez installation to $knots_install_path"
+
+    if (-not(Test-Path -Path $knots_install_path)) {
+        LogInfo "creating $( $knots_install_path )"
+        New-Item -Type Directory -Path $knots_install_path | Out-Null
+    }
+
+    $installed = Install-Python -python_version $python_version -target_dir $python_install
+    if ($installed) {
+        LogSucess "installed python $python_version to $python_install"
+    }
+
+    $env:PATH += ";$( $python_install )"
+
+    $check_python_path = (Get-Command python).Path
+    if (-not($check_python_path -eq "$( $python_install )\python.exe")) {
+        throw "Issue with python installation, unexpected path $check_python_path"
+    }
+
+    $installed = Install-Rez -rez_version $rez_version -target_dir $rez_full_install_path
+    if ($installed) {
+        LogSucess "installed rez $rez_version to $rez_full_install_path"
+    }
 
     LogInfo "setting environment variable KNOTS_REZ_INSTALLER_VERSION with $INSTALLER_VERSION"
     [Environment]::SetEnvironmentVariable('KNOTS_REZ_INSTALLER_VERSION', $INSTALLER_VERSION, $env_scope)
 
-    LogInfo "setting environment variable KNOTS_USER_ROOT_PATH with $knots_install_path"
-    [Environment]::SetEnvironmentVariable('KNOTS_USER_ROOT_PATH', $knots_install_path, $env_scope)
-
-}
-
-function Install-All {
-
-    $config = $KnotsInstallConfig
-
-    Write-Output $( "="*80 )
-    Write-Output "[$SCRIPTNAME v$INSTALLER_VERSION] install Rez package manager.`n"
-    LogInfo "starting rez installation to $( $config.knots_install_path )"
-
-    # TODO uncomment
-    #if (-not (Test-Path -Path $rez_config_file)) {
-    #    throw "Rez config file does not exists, check your properly mapped the NAS drives."
-    #}
-    if (-not(Test-Path -Path $config.knots_install_path)) {
-        LogInfo "creating $( $config.knots_install_path )"
-        New-Item -Type Directory -Path $config.knots_install_path | Out-Null
-    }
-
-    $installed = Install-Python -python_version $config.python_version -target_dir $config.python_install
-    if ($installed) {
-        LogSucess "installed python $( $config.python_version ) to $( $config.python_install )"
-    }
-
-    $env:PATH += ";$( $config.python_install )"
-
-    $check_python_path = (Get-Command python).Path
-    if (-not($check_python_path -eq "$( $config.python_install )\python.exe")) {
-        throw "Issue with python installation, unexpected path $check_python_path"
-    }
-
-    $installed = Install-Rez -rez_version $config.rez_version -target_dir $config.rez_full_install_path
-    if ($installed) {
-        LogSucess "installed rez $( $config.rez_version ) to $( $config.rez_full_install_path )"
-    }
-
-    Install-System `
-    -rez_config_file $config.rez_config_file `
-    -rez_scripts $config.rez_scripts `
-    -knots_install_path $config.knots_install_path `
-    -env_scope $config.env_var_scope
-
     # rez doesn't create its cache directory automatically :/
-    $rez_cache_dir = $config.rez_cache_path
     if (-not(Test-Path -Path $rez_cache_dir)) {
         LogInfo "creating $( $rez_cache_dir )"
         New-Item -Type Directory -Path $rez_cache_dir -ea 0 | Out-Null
     }
 
     if (Test-Path -Path "$HOME\.rezconfig") {
-        LogWarning "found local rezconfig at $HOME\.rezconfig; please remove to avoid issues."
+        LogWarning "found local rezconfig at $HOME\.rezconfig; please remove until you know what you do."
     }
 
     Write-Host $( "_"*80 ) -ForegroundColor "green"
-    LogSucess "installation finished ! You can test it by opening a new shell and typing:"
-    LogSucess "  rez -V"
+    LogSucess "installation finished !"
     Write-Output $( "="*80 )
 }
 
